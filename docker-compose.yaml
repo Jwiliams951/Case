@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  loki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./local-config.yaml:/etc/loki/local-config.yaml
+      - /tmp/loki/index:/loki/index
+      - /tmp/loki/chunks:/loki/chunks
+      - /tmp/loki/index_cache:/loki/index_cache
+      - /tmp/loki/wal:/loki/wal
+      - /tmp/loki/compactor:/loki/compactor
+    user: "10001:10001"
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+    - ./tempo-local.yaml:/etc/tempo.yaml
+    - ./tempo-data:/tmp/tempo
+    ports:
+    - "3200:3200"
+    - "4321:4321"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+
+  application:
+    image: nginxdemos/hello
+    ports:
+      - "8080:80"
